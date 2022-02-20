@@ -12,8 +12,6 @@ with open('bot_settings.txt', 'r+') as settings:
     join_message = str(settings.readline())[:-1]
     token = str(settings.readline())[:-1]
 
-print(token)
-
 owners = (180333726306140160, 619574125622722560)
 bot = commands.Bot(command_prefix=prefix, owner_ids=owners)
 settings.close()
