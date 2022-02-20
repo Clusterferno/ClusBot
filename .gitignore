@@ -1,0 +1,8 @@
+/venv
+/.idea
+/bot_settings.txt
+/log.csv
+/run_main.bat
+/test.csv
+/ignorethisfile
+/anotherignoredfile
