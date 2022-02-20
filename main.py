@@ -3,15 +3,21 @@ import pandas as pd
 import datetime
 from nextcord.ext import commands
 
+# ticket_log is the file that logs all the tickets, so the bot can restart w/o problems
+# it has the ChannelID of the ticket_thread, the AuthorTag and AuthorID of the person who the ticket is with
+# the Ticketnumber, simply a number that counts up when and functions as unique ID
+# the Status, whether the ticket is Active or Closed
+# and optionally the Moderator, if the ticket was created by a mod and the Reason for which the mod made the ticket
 ticket_log = pd.read_csv('log.csv', na_filter=False)
 ticket_log.info()
+# bot_settings.txt is a simple 5-line txt file with the ticket_hub_id in the 1st line, prefix in the 2nd, etc.
 with open('bot_settings.txt', 'r+') as settings:
     ticket_hub_id = int(settings.readline())
     prefix = str(settings.readline())[:-1]
     mod_anonymity = int(settings.readline())
     join_message = str(settings.readline())[:-1]
     token = str(settings.readline())[:-1]
-
+# initializing the bot
 owners = (180333726306140160, 619574125622722560)
 bot = commands.Bot(command_prefix=prefix, owner_ids=owners)
 settings.close()
@@ -76,8 +82,10 @@ async def debug_info(ctx):
 async def set_tickethub(ctx, channel_id):
     global ticket_hub_id
     try:
+        # check whether the channel exists
         await bot.fetch_channel(int(channel_id))
         ticket_hub_id = int(channel_id)
+        # update settings
         with open('bot_settings.txt', 'w') as settings_writable:
             settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}")
         # print(f"im at: {settings.tell()}, my name: {settings.name}")
@@ -125,6 +133,7 @@ async def open_ticket(ctx, user, *reason):
         user = await bot.fetch_user(user)  # attempts to fetch the user, the command fails if this doesn't work
         ticket_info = ticket_log[ticket_log['AuthorID'] == user.id].tail(1)
 
+        # this if statement ensures this user doesn't have any other open tickets to make sure a user only has 1 open ticket
         if (len(ticket_info['Status']) == 0) or (len(ticket_info['Status']) == 1 and ticket_info['Status'].iloc[0] != 'Active'):
             ticket_number = len(ticket_log) + 1
             ticket_hub = bot.get_channel(ticket_hub_id)
@@ -175,6 +184,7 @@ async def open_ticket(ctx, user, *reason):
             await ctx.channel.send("This user already has an open ticket.")
 
     except (commands.CommandInvokeError, nextcord.errors.NotFound, nextcord.errors.HTTPException):
+        # this is the error thrown when it tries to find the user but can't
         await ctx.channel.send("That is not a valid user. Please use a User ID.")
 
 
@@ -198,22 +208,27 @@ async def handle_message(message):
 
     if isinstance(message.channel, nextcord.DMChannel):
 
+        # this if statement gets the user's active ticket or the latest inactive ticket if there are no active ones
         if len(ticket_log[(ticket_log['AuthorID'] == message.author.id) & (ticket_log['Status'] == 'Active')]) > 0:
             ticket_info = ticket_log[(ticket_log['AuthorID'] == message.author.id) & (ticket_log['Status'] == 'Active')].tail(1)
         else:
             ticket_info = ticket_log[ticket_log['AuthorID'] == message.author.id].tail(1)
 
+        # check if the ticket is active
         if len(ticket_info['Status']) == 1 and ticket_info['Status'].iloc[0] == 'Active':
             ticket_info = ticket_info.iloc[0]
+            # ticket_thread is the thread used in the server used to communicate with the user
             ticket_thread = await bot.fetch_channel(ticket_info['ChannelID'])
             if message.content == f"{prefix}close":
                 ticket_info['Status'] = 'Closed'
+                # sets the ticket to closed in the DataFrame
                 ticket_log.loc[(ticket_log['AuthorID'] == message.author.id) & (ticket_log['Status'] == 'Active'), 'Status'] = 'Closed'
 
                 await message.channel.send("Ticket closed. Send `ticket` to open another ticket.")
                 await ticket_thread.send("Ticket closed by creator.")
                 await ticket_thread.edit(archived=True)
             else:
+                # this else handles sending the message from the user to the ticket thread
                 msg_to_send = nextcord.Embed(
                     description=f"{message.content}",
                     colour=nextcord.Colour.from_rgb(80, 35, 121),
@@ -228,9 +243,11 @@ async def handle_message(message):
                 await message.add_reaction('✅')
 
         elif message.content.lower() == 'ticket':
+            # the unique ID for tickets
             ticket_number = len(ticket_log) + 1
             await message.channel.send("Ticket opened. I will react with :white_check_mark: to confirm I sent your message.")
             tickets = bot.get_channel(ticket_hub_id)
+            # create a ticket thread
             ticket_thread = await tickets.create_thread(
                 name=f'{message.author} num{ticket_number} id{message.author.id}',
                 type=nextcord.ChannelType.public_thread,
@@ -247,6 +264,7 @@ async def handle_message(message):
             await ticket_thread.send(embed=msg_to_send)
             ticket_log.loc[len(ticket_log)] = new_ticket
 
+        # reopen the ticket if the user sends the command
         elif message.content.lower() == f"{prefix}reopen" and len(ticket_info['Status']) == 1 and ticket_info['Status'].iloc[0] == 'Closed':
             ticket_info = ticket_info.iloc[0]
             ticket_thread = await bot.fetch_channel(ticket_info['ChannelID'])
@@ -260,6 +278,7 @@ async def handle_message(message):
             await message.channel.send('Hello. Do you want to open a ticket? Type `ticket` to start a ticket.' +
                                        f'\nWhen you want to close the ticket, type `{prefix}close` to close it.')
 
+    # this deals with sending messages from the thread to the user
     elif isinstance(message.channel, nextcord.Thread) and len(ticket_log.loc[ticket_log['ChannelID'] == message.channel.id]) > 0:
 
         ticket_info = ticket_log[ticket_log['ChannelID'] == message.channel.id].tail(1).iloc[0]
