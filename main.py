@@ -8,7 +8,12 @@ from nextcord.ext import commands
 # the Ticketnumber, simply a number that counts up when and functions as unique ID
 # the Status, whether the ticket is Active or Closed
 # and optionally the Moderator, if the ticket was created by a mod and the Reason for which the mod made the ticket
-ticket_log = pd.read_csv('log.csv', na_filter=False)
+
+try:
+    ticket_log = pd.read_csv('log.csv', na_filter=False)
+except FileNotFoundError:
+    ticket_log = pd.DataFrame(columns=['ChannelID', 'AuthorTag', 'AuthorID', 'Ticketnumber', 'Status', 'Moderator', 'Reason'])
+
 ticket_log.info()
 # bot_settings.txt is a simple 5-line txt file with the ticket_hub_id in the 1st line, prefix in the 2nd, etc.
 with open('bot_settings.txt', 'r+') as settings:
@@ -21,7 +26,8 @@ with open('bot_settings.txt', 'r+') as settings:
 owners = (180333726306140160, 619574125622722560)
 bot = commands.Bot(command_prefix=prefix, owner_ids=owners)
 settings.close()
-print(f"Ticket hub: {ticket_hub_id}\nPrefix: {prefix}\nMod anonymity: {mod_anonymity}\nCmd prefix: {bot.command_prefix}")
+print(f"Ticket hub: {ticket_hub_id}\nPrefix: {prefix}\nMod anonymity: {mod_anonymity}\nCmd prefix: {bot.command_prefix}"
+      f"\nToken: {token}")
 
 
 @bot.command(name='test', help="Quite pointless to be honest.")
@@ -87,7 +93,7 @@ async def set_tickethub(ctx, channel_id):
         ticket_hub_id = int(channel_id)
         # update settings
         with open('bot_settings.txt', 'w') as settings_writable:
-            settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}")
+            settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}")
         # print(f"im at: {settings.tell()}, my name: {settings.name}")
         await ctx.channel.send(f"Ticket hub updated to <#{int(channel_id)}>.")
     except (nextcord.errors.NotFound, ValueError):
@@ -102,7 +108,7 @@ async def set_prefix(ctx, new_prefix):
     prefix = new_prefix
     bot.command_prefix = prefix
     with open('bot_settings.txt', 'w') as settings_writable:
-        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}")
+        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}")
     await ctx.channel.send(f"Prefix updated to {prefix}.")
 
 
@@ -120,7 +126,7 @@ async def set_mod_anonymity(ctx, new_value):
     else:
         await ctx.channel.send("Please enter a valid argument (0 or 1)")
     with open('bot_settings.txt', 'w') as settings_writable:
-        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}")
+        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}")
 
 
 @bot.command(name="open_ticket",
