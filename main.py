@@ -71,8 +71,8 @@ async def set_logs(ctx):
     ctx.channel.send("Successfully overridden old log")
 
 
-@bot.command(name='get_settings', help="Get the settings file, where the bot's settings are stored. Requires Manage Channels")
-@commands.has_guild_permissions(manage_channels=True)
+@bot.command(name='get_settings', help="Get the settings file, where the bot's settings are stored. Requires Owner")
+@commands.is_owner()
 async def get_logs(ctx):
     await ctx.channel.send(file=nextcord.File('bot_settings.txt'))
 
@@ -93,7 +93,7 @@ async def set_tickethub(ctx, channel_id):
         ticket_hub_id = int(channel_id)
         # update settings
         with open('bot_settings.txt', 'w') as settings_writable:
-            settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}")
+            settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}\n")
         # print(f"im at: {settings.tell()}, my name: {settings.name}")
         await ctx.channel.send(f"Ticket hub updated to <#{int(channel_id)}>.")
     except (nextcord.errors.NotFound, ValueError):
@@ -108,7 +108,7 @@ async def set_prefix(ctx, new_prefix):
     prefix = new_prefix
     bot.command_prefix = prefix
     with open('bot_settings.txt', 'w') as settings_writable:
-        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}")
+        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}\n")
     await ctx.channel.send(f"Prefix updated to {prefix}.")
 
 
@@ -126,7 +126,7 @@ async def set_mod_anonymity(ctx, new_value):
     else:
         await ctx.channel.send("Please enter a valid argument (0 or 1)")
     with open('bot_settings.txt', 'w') as settings_writable:
-        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}")
+        settings_writable.write(f"{ticket_hub_id}\n{prefix}\n{mod_anonymity}\n{join_message}\n{token}\n")
 
 
 @bot.command(name="open_ticket",
